@@ -64,9 +64,13 @@ try {
     Close-Launcher $p
     $p = Launch $exe
     $window = $p.MainWindowHandle
-    if ((Read-Control $window 101) -ne 'MawTest' -or (Read-Control $window 103) -ne 'alpha=beta') { throw 'Settings did not survive restart' }
+    if ((Read-Control $window 101) -ne 'MawTest' -or (Get-Content $config -Raw) -ne $saved) { throw 'Settings did not survive restart' }
     if ([Ui]::Send([Ui]::GetDlgItem($window,102), 0xF0, [IntPtr]::Zero, [IntPtr]::Zero) -ne [IntPtr]::Zero) { throw 'Friends-only setting did not survive restart' }
     if ([Ui]::Send([Ui]::GetDlgItem($window,103), 0xD2, [IntPtr]::Zero, [IntPtr]::Zero) -eq [IntPtr]::Zero) { throw 'Password was not masked' }
+    # Windows blocks WM_GETTEXT on another process's password control until shown.
+    [void][Ui]::Send([Ui]::GetDlgItem($window,105), 0xF5, [IntPtr]::Zero, [IntPtr]::Zero)
+    if ((Read-Control $window 103) -ne 'alpha=beta') { throw 'Show password did not reveal the persisted value' }
+    [void][Ui]::Send([Ui]::GetDlgItem($window,105), 0xF5, [IntPtr]::Zero, [IntPtr]::Zero)
     # Capture the real Win32 window for visual inspection of layout/masking.
     Add-Type -AssemblyName System.Drawing
     $bounds = [Ui+Rect]::new()
