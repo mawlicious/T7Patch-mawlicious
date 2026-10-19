@@ -67,12 +67,14 @@ uintptr_t FindPatch(DWORD pid, const fs::path& dll) {
     return 0;
 }
 
-DWORD RemoteCall(HANDLE process, uintptr_t fn, void* argument, HANDLE stop) {
+DWORD RemoteCall(HANDLE process, uintptr_t fn, void* argument) {
     Handle thread(CreateRemoteThread(process, nullptr, 0,
         reinterpret_cast<LPTHREAD_START_ROUTINE>(fn), argument, 0, nullptr));
     if (!thread.value) throw std::runtime_error("Could not start patch initialization in BO3.");
-    // Do not free remote arguments while a remote thread could still use them.
-    HANDLE waits[]{thread.value, stop};
+    // Once attachment begins, shutdown must wait for load AND initialization.
+    // Cancelling here can strand a loaded DLL whose initializer never ran.
+    // A terminated target is still an immediate exit; other failures are bounded.
+    HANDLE waits[]{thread.value, process};
     if (WaitForMultipleObjects(2, waits, FALSE, 60000) != WAIT_OBJECT_0)
         throw std::runtime_error("Patch initialization did not finish within 60 seconds. Restart BO3 before retrying.");
     DWORD code = 0;
@@ -134,7 +136,7 @@ bool Ready(HANDLE process, DWORD pid, const Game& game) {
     return check.found;
 }
 
-DWORD Attach(HANDLE process, DWORD pid, const fs::path& dll, HANDLE stop) {
+DWORD Attach(HANDLE process, DWORD pid, const fs::path& dll) {
     // Resolve the initializer before mutating the target process.
     auto local = LoadLibraryExW(dll.c_str(), nullptr, DONT_RESOLVE_DLL_REFERENCES);
     if (!local) throw std::runtime_error("Cannot read T7Patch-mawlicious.dll. Extract the entire release ZIP.");
@@ -152,11 +154,11 @@ DWORD Attach(HANDLE process, DWORD pid, const fs::path& dll, HANDLE stop) {
         VirtualFreeEx(process, remote, 0, MEM_RELEASE);
         throw std::runtime_error("Cannot copy the patch path into BO3.");
     }
-    RemoteCall(process, load, remote, stop);
+    RemoteCall(process, load, remote);
     VirtualFreeEx(process, remote, 0, MEM_RELEASE);
     const auto base = FindPatch(pid, dll);
     if (!base) throw std::runtime_error("Windows could not load the patch DLL. Restart BO3 before retrying.");
-    return RemoteCall(process, base + initRva, nullptr, stop);
+    return RemoteCall(process, base + initRva, nullptr);
 }
 
 struct App {
@@ -200,7 +202,7 @@ struct App {
                             Status(L"BO3 detected. Waiting for the game to initialize..."); continue;
                         }
                         Status(L"Attaching T7Patch-mawlicious...");
-                        const auto result = Attach(process, pid, dll, stop);
+                        const auto result = Attach(process, pid, dll);
                         finished = true;
                         if (result == 0) Status(L"Attached. Lobby-info timeout verified at 30 seconds.");
                         else if (result == 3) Status(L"Patch attached, but 30s is NOT ACTIVE. Check the in-game label.");
