@@ -71,7 +71,7 @@ namespace hooks {
 		}
 
 		bool hkLiveInventory_AreExtraSlotsPurchased(ControllerIndex_t controllerIndex) {
-
+		
 			#if SPOOF_UNLOCK
 				return true;
 			#endif
@@ -82,7 +82,7 @@ namespace hooks {
 		const char* hkInfo_ValueForKey(char* a1, __int64 a2) {
 			return Info_ValueForKey(a1, a2);
 		}
-
+		
 		// Caused uninstalled content to show as available.
 		bool hkLiveInventory_IsValid(ControllerIndex_t controllerIndex) {
 
@@ -265,7 +265,7 @@ namespace hooks {
 
 			return 1;
 		}
-
+		
 		const char* __fastcall hkCL_GetConfigString(std::int32_t configStringIndex)
 		{
 
@@ -459,8 +459,8 @@ namespace hooks {
 			}
 
 			return LobbyTypes_GetMsgTypeName(index);
-		}
-
+		}		
+		
 		__int64 hkSys_VerifyPacketChecksum(const char* payload, __int32 payloadLen)
 		{
 			if (payloadLen >= 2)
@@ -505,7 +505,7 @@ namespace hooks {
 			return zbr_window_text;
 		}
 
-		void hkLiveSteam_InitServer()
+		void hkLiveSteam_InitServer() 
 		{
 			return;
 		}
@@ -550,7 +550,7 @@ namespace hooks {
 				is_valid_packet = false;
 			}
 			else if (packetType == 0x66) // is a joinRequest
-			{
+			{		
 				if ((msgSize - msgRead) != 0x64) // has a bad message size which leads to error message
 				{
 					is_valid_packet = false;
@@ -576,7 +576,7 @@ namespace hooks {
 					MSG_ReadData(&msg, data, size);
 					return LobbyMsg_HandleIM(0, senderXuid, data, size);
 				}
-
+				
 			}
 
 			return 0;
@@ -644,7 +644,7 @@ namespace hooks {
 
 		bool hkLobbyMsgRW_PackageInt(LobbyMsg* lobbyMsg, const char* key, __int32* val)
 		{
-
+			
 			bool result = LobbyMsgRW_PackageInt(lobbyMsg, key, val);
 
 			if (result && (!Protection::I_stricmp(key, "lobbytype") || !Protection::I_stricmp(key, "srclobbytype") || !Protection::I_stricmp(key, "destlobbytype")))
@@ -1000,7 +1000,7 @@ namespace hooks {
 			return Mods_IsModsLoaded();
 		}
 
-		bool hkMods_IsModsLoaded_1()
+		bool hkMods_IsModsLoaded_1() 
 		{
 			#if SPOOF_RANKED
 				return false;
