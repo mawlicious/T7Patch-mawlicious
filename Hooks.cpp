@@ -516,7 +516,7 @@ namespace hooks {
 			{
 				return Live_SystemInfo(controllerIndex, infoType, outputString, outputLen);
 			}
-			strcpy_s(outputString, outputLen, ZBR_VERSION_FULL);
+			strcpy_s(outputString, outputLen, lobby_timeout::Label());
 			return true;
 		}
 

@@ -538,13 +538,13 @@ INT64 Protection::GetOriginalSteamPtr(__int64 hLibrary, int vtIndex)
     return SteamHAPIHooks[hLibrary][vtIndex];
 }
 
-bool fs_exists(const char* filename)
+bool fs_exists(const std::filesystem::path& filename)
 {
     if (!std::filesystem::exists(filename))
     {
         return false;
     }
-    if (INVALID_FILE_ATTRIBUTES == GetFileAttributesA(filename) && GetLastError() == ERROR_FILE_NOT_FOUND)
+    if (INVALID_FILE_ATTRIBUTES == GetFileAttributesW(filename.c_str()) && GetLastError() == ERROR_FILE_NOT_FOUND)
     {
         return false;
     }
@@ -577,7 +577,7 @@ struct patch_config
         memset(playername, 0, 16);
     }
 
-    bool update_watcher_time(const char* path)
+    bool update_watcher_time(const std::filesystem::path& path)
     {
         bool did_exist_before = exists;
         if (!fs_exists(path))
@@ -595,7 +595,7 @@ struct patch_config
         return (did_exist_before != exists) || !was_same_time;
     }
 
-    void saveto(const char* path)
+    void saveto(const std::filesystem::path& path)
     {
         std::ofstream outfile(path);
 
@@ -614,7 +614,7 @@ struct patch_config
         update_watcher_time(path);
     }
 
-    void loadfrom(const char* path)
+    void loadfrom(const std::filesystem::path& path)
     {
         std::ifstream infile(path);
 
