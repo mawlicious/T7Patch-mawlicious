@@ -88,10 +88,15 @@ namespace lobby_timeout
         patchedDvar = nullptr;
     }
 
-    const char* Label()
+    bool Active()
     {
         int value = 0;
-        return applied.load() && ReadInt(patchedDvar, value) && value == 30000
+        return applied.load() && ReadInt(patchedDvar, value) && value == 30000;
+    }
+
+    const char* Label()
+    {
+        return Active()
             ? "T7Patch-mawlicious 3.09 - join info 30s - by serious <3"
             : "T7Patch-mawlicious 3.09 - join info 30s NOT ACTIVE - by serious <3";
     }

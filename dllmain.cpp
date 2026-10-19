@@ -519,7 +519,8 @@ EXPORT DWORD WINAPI InitializeMawlicious(LPVOID)
     static LONG started = 0;
     if (InterlockedCompareExchange(&started, 1, 0) != 0) return 1;
     Protection::IsInjectorlessInstall = true;
-    return RunPatching() ? 0 : 2;
+    if (!RunPatching()) return 2;
+    return lobby_timeout::Active() ? 0 : 3;
 }
 
 EXPORT void EnableInjectorlessInstall() // must be called BEFORE loading the patch via zbr_run_gamemode_lui
