@@ -4,6 +4,9 @@ using System;
 using System.Text;
 using System.Runtime.InteropServices;
 public static class Ui {
+    [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr window, out Rect rect);
+    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr window, IntPtr hdc, uint flags);
     [DllImport("user32.dll")] public static extern IntPtr GetDlgItem(IntPtr window, int id);
     [DllImport("user32.dll", EntryPoint="SendMessageW", CharSet=CharSet.Unicode)] public static extern IntPtr Text(IntPtr window, uint message, IntPtr w, string text);
     [DllImport("user32.dll", EntryPoint="SendMessageW", CharSet=CharSet.Unicode)] public static extern IntPtr Read(IntPtr window, uint message, IntPtr w, StringBuilder text);
@@ -33,7 +36,7 @@ function Close-Launcher($p) {
     if (!$p.WaitForExit(10000)) { $p.Kill(); throw 'Launcher failed to close cleanly' }
     if ($p.ExitCode -ne 0) { throw "Launcher exit code $($p.ExitCode)" }
 }
-$folder = Join-Path $env:RUNNER_TEMP 'T7Patch-mawlicious-ui-test'
+$folder = Join-Path $env:RUNNER_TEMP 'T7Patch-mawlicious-ui-Ü-اختبار'
 New-Item -ItemType Directory -Force $folder | Out-Null
 Copy-Item T7Patch-mawlicious.exe, x64/Release/T7Patch-mawlicious.dll $folder
 $config = Join-Path $folder 't7patch-mawlicious.conf'
@@ -64,6 +67,17 @@ try {
     if ((Read-Control $window 101) -ne 'MawTest' -or (Read-Control $window 103) -ne 'alpha=beta') { throw 'Settings did not survive restart' }
     if ([Ui]::Send([Ui]::GetDlgItem($window,102), 0xF0, [IntPtr]::Zero, [IntPtr]::Zero) -ne [IntPtr]::Zero) { throw 'Friends-only setting did not survive restart' }
     if ([Ui]::Send([Ui]::GetDlgItem($window,103), 0xD2, [IntPtr]::Zero, [IntPtr]::Zero) -eq [IntPtr]::Zero) { throw 'Password was not masked' }
+    # Capture the real Win32 window for visual inspection of layout/masking.
+    Add-Type -AssemblyName System.Drawing
+    $bounds = [Ui+Rect]::new()
+    [void][Ui]::GetWindowRect($window, [ref]$bounds)
+    $bitmap = [Drawing.Bitmap]::new($bounds.Right-$bounds.Left, $bounds.Bottom-$bounds.Top)
+    $graphics = [Drawing.Graphics]::FromImage($bitmap)
+    $dc = $graphics.GetHdc()
+    try { [void][Ui]::PrintWindow($window, $dc, 2) } finally { $graphics.ReleaseHdc($dc); $graphics.Dispose() }
+    New-Item -ItemType Directory -Force release | Out-Null
+    $bitmap.Save((Join-Path $PWD 'release/launcher-mawlicious.png'), [Drawing.Imaging.ImageFormat]::Png)
+    $bitmap.Dispose()
     Close-Launcher $p
     $p = $null
     Write-Output 'Window, auto-save, validation, password masking, config location, option preservation and restart persistence passed.'

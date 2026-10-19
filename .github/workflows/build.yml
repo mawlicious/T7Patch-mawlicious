@@ -43,3 +43,4 @@ jobs:
           path: |
             release/T7Patch-mawlicious-windows-x64.zip
             release/SHA256SUMS
+            release/launcher-mawlicious.png
