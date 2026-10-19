@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 
 namespace lobby_timeout
 {
@@ -6,5 +7,5 @@ namespace lobby_timeout
     void Restore();
     bool Active();
     const char* Label();
-    const char* ConfigPath();
+    const std::filesystem::path& ConfigPath();
 }

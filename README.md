@@ -10,14 +10,23 @@ wait from **10 to 30 seconds**. Successful replies continue immediately.
 2. Extract the complete `T7Patch-mawlicious` folder to a writable location.
 3. Close other T7Patch launchers. Disable any existing manual T7Patch installation
    before launching BO3 (do not stack patches).
-4. Edit `t7patch-mawlicious.conf` in this folder for your player name, friends-only
-   setting and network password. The default is friends-only, no password.
-   Everyone playing together must use the same network password if one is set.
-5. Start BO3 through Steam and wait at the main menu. Run `T7Patch-mawlicious.exe`
-   and press Enter when prompted. Repeat this step each time you restart BO3.
-6. Check the top-right in-game label: **T7Patch-mawlicious 3.09 - join info 30s**.
-   `NOT ACTIVE` means the setting was not applied/verified. The launcher may then
-   be closed. Settings remain in the extracted folder and are reloaded in game.
+4. Open **T7Patch-mawlicious.exe**. Choose your player name, friends-only option
+   and network password in the window. Settings save automatically; there is
+   also a Save settings button. Default: friends-only, no password. Everyone
+   playing together must use the same network password if one is set.
+5. Leave the window open and start BO3 through Steam as usual. The launcher
+   detects BO3, waits for its interfaces/player data to initialize, and attaches
+   automatically. It watches for game restarts too. There is no console or
+   press-Enter step. The launcher also works if BO3 is already running.
+6. Confirm the launcher says the 30-second timeout was verified and the top-right
+   in-game label says **T7Patch-mawlicious 3.09 - join info 30s**. `NOT ACTIVE`
+   means the timeout setting was not applied/verified. Settings changes reload
+   in game. Closing the launcher leaves the existing patch active until BO3 exits.
+
+The launcher recreates the familiar settings-and-auto-attach workflow using a
+native Windows UI. It is not the original .NET launcher: its source is not
+included in Scroptss's published patch source. The game patch is built from
+Scroptss's source. No separate T7Patch download or Python/.NET runtime is needed.
 
 Use the current Windows Steam BO3 builds supported by Scroptss's patch
 (February/September 2026). Older and unknown builds are unsupported.
@@ -31,7 +40,8 @@ when a valid lobby reply arrives after the original 10-second limit.
 
 Built and tested on Windows CI. Tests exercise the actual timeout implementation
 with a mock engine, including missing/wrong dvars, rejected writes, successful
-readback, labels and restoration. **Windows gameplay has not been tested here**;
+readback, labels and restoration. Windows UI tests check automatic settings
+saving, validation, password masking, option preservation and restart persistence. **Windows gameplay has not been tested here**;
 treat the first release as experimental and confirm the in-game label.
 
 See [UPSTREAM.md](UPSTREAM.md) for provenance, offset evidence and limitations.

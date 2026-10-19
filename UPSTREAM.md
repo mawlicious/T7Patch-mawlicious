@@ -27,11 +27,20 @@ an older, unsupported build (timestamp 63F95E3C, image size 1FAB7000), not eithe
 2026 build, so it cannot validate current runtime offsets. This release retains
 Scroptss's supported-build check and does not support that old executable.
 
-Other changes are the native branded launcher, separate config/crash filenames,
+Other changes are the native branded settings/auto-attach launcher, separate config/crash filenames,
 window/in-game labels, build workflow and tests. Existing security, campaign and
 Lua behavior is inherited from upstream. The launcher loads the patch DLL and
 calls the same initialization path as upstream's manual installer. It does not
 modify game files or require Wine/Python/.NET. Source builds use Windows MSVC.
+
+Scroptss publishes the DLL source but not its released .NET launcher's UI source.
+This fork's launcher recreates the name/friends-only/password workflow with
+native Win32 controls, saves the same configuration format beside the DLL, and
+watches for BO3/restarts. Before attachment it validates the supported executable
+fingerprint, initialized Steam interface/player-data/lobby/dvar pointers and a
+visible game window. It never repeatedly initializes a failed/attached process.
+The configuration file is replaced atomically, supports Unicode folder paths,
+and preserves other upstream options such as autoinstallmods.
 
 No handshake, reservation, stat-transfer, or loading timeout is changed.
 No claim is made to fix the Synchronizing game settings stall.

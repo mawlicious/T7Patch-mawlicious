@@ -40,23 +40,23 @@ namespace lobby_timeout
         }
     }
 
-    const char* ConfigPath()
+    const std::filesystem::path& ConfigPath()
     {
         // Settings belong to this distribution even when BO3's cwd differs.
-        static const std::string path = [] {
+        static const std::filesystem::path path = [] {
             HMODULE module = nullptr;
-            char filename[MAX_PATH]{};
-            if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+            wchar_t filename[32768]{};
+            if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                     GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                    reinterpret_cast<LPCSTR>(&ConfigPath), &module))
-                return std::string("t7patch-mawlicious.conf");
-            const auto length = GetModuleFileNameA(module, filename, MAX_PATH);
-            if (!length || length >= MAX_PATH)
-                return std::string("t7patch-mawlicious.conf");
+                    reinterpret_cast<LPCWSTR>(&ConfigPath), &module))
+                return std::filesystem::path(L"t7patch-mawlicious.conf");
+            const auto length = GetModuleFileNameW(module, filename, 32768);
+            if (!length || length >= 32768)
+                return std::filesystem::path(L"t7patch-mawlicious.conf");
             return (std::filesystem::path(filename).parent_path() /
-                "t7patch-mawlicious.conf").string();
+                L"t7patch-mawlicious.conf");
         }();
-        return path.c_str();
+        return path;
     }
 
     void Apply()
