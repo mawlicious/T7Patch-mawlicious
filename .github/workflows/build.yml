@@ -21,7 +21,7 @@ jobs:
           test-timeout-mawlicious.exe
       - name: Build patch
         shell: cmd
-        run: msbuild T7Patch.vcxproj /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /p:SolutionDir="%CD%\" /m
+        run: msbuild T7Patch.vcxproj /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /p:SolutionDir="%CD%/" /m
       - name: Build launcher
         shell: cmd
         run: cl /nologo /std:c++20 /EHsc /W4 /MT /O2 launcher\main.cpp /Fe:T7Patch-mawlicious.exe

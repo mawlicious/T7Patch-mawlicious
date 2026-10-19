@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <cstdint>
 #include <cstring>
+#include <cstdlib>
 inline bool testSupported = true;
 inline bool testWritable = true;
 inline bool testFound = true;
