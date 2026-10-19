@@ -66,7 +66,17 @@ inline void Save(const std::filesystem::path& path, const Config& c) {
         file << "playername=" << c.name << "\nisfriendsonly=" << (c.friendsOnly ? 1 : 0)
              << "\nnetworkpassword=" << c.password << "\n" << c.extra;
         file.close();
-        if (!file || !MoveFileExW(temp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+        bool moved = false;
+        for (int attempt = 0; file && attempt < 10; ++attempt) {
+            if (MoveFileExW(temp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+                moved = true;
+                break;
+            }
+            const auto error = GetLastError();
+            if (error != ERROR_SHARING_VIOLATION && error != ERROR_ACCESS_DENIED) break;
+            if (attempt < 9) Sleep(25);
+        }
+        if (!moved)
             throw std::runtime_error("Cannot replace the settings file. Check folder permissions.");
     } catch (...) {
         std::error_code error;
