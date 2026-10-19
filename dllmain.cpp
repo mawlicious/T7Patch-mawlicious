@@ -476,7 +476,7 @@ void UninstallHook()
     }
 }
 
-void RunPatching()
+bool RunPatching()
 {
 	// Set the process priority to above normal to help with performance
     SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
@@ -484,9 +484,9 @@ void RunPatching()
     std::string arxanMessage;
     if (!arxan_bypass::install(arxanMessage))
     {
-        arxanMessage = "T7 Patch: " + arxanMessage + "\n";
+        arxanMessage = "T7Patch-mawlicious: " + arxanMessage + "\n";
         OutputDebugStringA(arxanMessage.c_str());
-        return;
+        return false;
     }
 
 	// Initialize MinHook
@@ -509,6 +509,17 @@ void RunPatching()
 
 	// Install the protection hooks
     Protection::install();
+    lobby_timeout::Apply();
+    return true;
+}
+
+// Native launcher entry point; same patch path as the upstream manual loader.
+EXPORT DWORD WINAPI InitializeMawlicious(LPVOID)
+{
+    static LONG started = 0;
+    if (InterlockedCompareExchange(&started, 1, 0) != 0) return 1;
+    Protection::IsInjectorlessInstall = true;
+    return RunPatching() ? 0 : 2;
 }
 
 EXPORT void EnableInjectorlessInstall() // must be called BEFORE loading the patch via zbr_run_gamemode_lui
@@ -561,6 +572,7 @@ EXPORT void Unload()
 
     CloseHandle(hThreadSnap);
 
+    lobby_timeout::Restore();
     Protection::uninstall();
     is_unhooking = true;
     UninstallHook();

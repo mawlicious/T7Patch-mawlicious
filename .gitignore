@@ -3,3 +3,8 @@
 /x64
 stock-symbols/
 tools/
+/release/
+/*.exe
+/*.obj
+/*.pdb
+/*.ilk
