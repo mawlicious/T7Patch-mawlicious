@@ -75,7 +75,12 @@ DWORD RemoteCall(HANDLE process, uintptr_t fn, void* argument) {
     // Cancelling here can strand a loaded DLL whose initializer never ran.
     // A terminated target is still an immediate exit; other failures are bounded.
     HANDLE waits[]{thread.value, process};
-    if (WaitForMultipleObjects(2, waits, FALSE, 60000) != WAIT_OBJECT_0)
+    const auto waited = WaitForMultipleObjects(2, waits, FALSE, 60000);
+    if (waited == WAIT_OBJECT_0 + 1)
+        throw std::runtime_error("BO3 exited during patch initialization.");
+    if (waited == WAIT_FAILED)
+        throw std::runtime_error("Cannot wait for patch initialization (Windows error " + std::to_string(GetLastError()) + "). Restart BO3 before retrying.");
+    if (waited != WAIT_OBJECT_0)
         throw std::runtime_error("Patch initialization did not finish within 60 seconds. Restart BO3 before retrying.");
     DWORD code = 0;
     if (!GetExitCodeThread(thread, &code)) throw std::runtime_error("Cannot read initialization result.");

@@ -13,13 +13,17 @@ int main() {
     Handle loading(CreateEventW(nullptr, TRUE, FALSE, (L"Local\\MawliciousTestLoading" + suffix).c_str()));
     Handle release(CreateEventW(nullptr, TRUE, FALSE, (L"Local\\MawliciousTestRelease" + suffix).c_str()));
     Require(loading.value && release.value, "Cannot create fixture events");
+    // Match the real launcher: WaitForMultipleObjects needs a real process
+    // handle, not GetCurrentProcess()'s pseudo-handle in its handle array.
+    Handle process(OpenProcess(PROCESS_ALL_ACCESS, FALSE, GetCurrentProcessId()));
+    Require(process.value != nullptr, "Cannot open fixture process");
     const auto dll = fs::absolute(L"attach-fixture-mawlicious.dll");
     DWORD result = 99;
     std::exception_ptr error;
     {
         App app;
         app.worker = std::thread([&] {
-            try { std::cerr << "Starting Attach.\n"; result = Attach(GetCurrentProcess(), GetCurrentProcessId(), dll); std::cerr << "Attach returned " << result << ".\n"; }
+            try { std::cerr << "Starting Attach.\n"; result = Attach(process, GetCurrentProcessId(), dll); std::cerr << "Attach returned " << result << ".\n"; }
             catch (...) { error = std::current_exception(); }
         });
         const auto waited = WaitForSingleObject(loading, 10000);
