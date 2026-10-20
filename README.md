@@ -46,4 +46,18 @@ treat the first release as experimental and confirm the in-game label.
 
 See [UPSTREAM.md](UPSTREAM.md) for provenance, offset evidence and limitations.
 To build: use Visual Studio 2022 C++ tools/Windows SDK, or the included Actions
-workflow. No review-bot loop was run for this release.
+workflow. Changes are reviewed through pull requests before publishing release updates.
+
+## Startup crash fix (gui3)
+
+Initializes protection function pointers, packet keys and callbacks before the
+running game can enter the patch's hooks. Resolves the protection exception
+handler's own `ZwContinue` pointer before installing it. This addresses the
+null comparison call found in a gui2 crash dump and the uninitialized
+continuation path implicated by its protection-marker crash logs.
+
+Windows CI tests the compiled DLL's actual dependency preparation and marker
+exception continuation, in addition to the existing launcher and timeout tests.
+Live BO3 gameplay still needs confirmation on Windows. If a crash remains,
+send `crashes-mawlicious.log` from the game folder and any new `.dmp` file.
+The launcher status is displayed in its window, not saved as a separate log.

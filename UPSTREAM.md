@@ -44,3 +44,29 @@ and preserves other upstream options such as autoinstallmods.
 
 No handshake, reservation, stat-transfer, or loading timeout is changed.
 No claim is made to fix the Synchronizing game settings stall.
+
+## gui3 startup crash investigation
+
+A supplied gui2 minidump records an execute access violation at RIP 0. Its top
+stack return address is `T7Patch-mawlicious.dll + 0x16BEA`. Disassembly of the
+published gui2 DLL shows the preceding instruction calls the pointer at DLL RVA
+`0x77450`; the containing hook is `hkCL_GetConfigString`, and that pointer is
+`Protection::I_stricmp`, initialized only later in `Protection::install`.
+`ApplyHooks` had already enabled the hook on the game's running threads.
+
+Separate text crash records contain the lobby-protection sentinel
+`0xFFEEDDCC44332212`. The class's `Protection::ZwContinue` was initialized to
+null and never assigned; it is separate from the initialized global in
+`dllmain.cpp`. The protection exception handler used the null class pointer.
+
+`Protection::prepare` now resolves continuation and initializes callback
+function pointers, packet-key strings and callback tables before publishing
+any VMT or MinHook detours or installing the exception handler. The two other
+supplied dumps fault at executable RVA `0x225247F` and do not list the patch
+DLL; this change does not claim to diagnose or fix those crashes.
+
+CI tests the production DLL via its linker map without adding test exports or
+executing game code. A fake player-data page supplies preparation's one game
+read; the protection marker handler then restores its registers and reaches a
+recording continuation. PDB and map artifacts are retained separately for
+future crash diagnosis; crash dumps are not published in this repository.
