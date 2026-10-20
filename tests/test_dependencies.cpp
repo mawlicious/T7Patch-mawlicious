@@ -8,6 +8,15 @@
 #include <stdexcept>
 #include <string>
 
+const char* stage = "starting";
+LONG WINAPI ReportFault(EXCEPTION_POINTERS* fault) {
+    std::cerr << "Native test fault during " << stage << ": code 0x" << std::hex
+        << fault->ExceptionRecord->ExceptionCode << " at "
+        << fault->ExceptionRecord->ExceptionAddress << ", accessed 0x"
+        << fault->ExceptionRecord->ExceptionInformation[1] << '\n';
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
 void Require(bool condition, const char* message) {
     if (!condition) throw std::runtime_error(message);
 }
@@ -40,13 +49,17 @@ unsigned long long __fastcall RecordContinuation(PCONTEXT context, BOOLEAN alert
 }
 
 int main(int argc, char** argv) {
+    SetUnhandledExceptionFilter(ReportFault);
     try {
         Require(argc == 3, "Expected DLL and map paths");
         const auto path = std::filesystem::absolute(argv[1]);
+        stage = "loading production DLL";
         const auto dll = LoadLibraryW(path.c_str());
         Require(dll != nullptr, "Cannot load production patch DLL");
+        stage = "resolving production symbols";
         auto& compare = *reinterpret_cast<std::uintptr_t*>(Symbol(dll, argv[2], "?I_stricmp@Protection@@"));
         auto& resume = *reinterpret_cast<std::uintptr_t*>(Symbol(dll, argv[2], "?ZwContinue@Protection@@"));
+        std::cerr << "DLL " << dll << ", compare " << &compare << ", resume " << &resume << '\n';
         Require(compare == 0 && resume == 0, "Unexpected initial dependency state");
 
         const auto gameBase = reinterpret_cast<std::uintptr_t>(GetModuleHandleW(nullptr));
@@ -62,6 +75,8 @@ int main(int argc, char** argv) {
         *reinterpret_cast<std::uint64_t**>(gameBase + playerDataRva) = &xuid;
 
         const auto prepare = reinterpret_cast<bool(*)()>(Symbol(dll, argv[2], "?prepare@Protection@@"));
+        stage = "preparing dependencies";
+        std::cerr << "Preparing at " << reinterpret_cast<void*>(prepare) << '\n';
         Require(prepare(), "Dependency preparation failed");
         Require(compare == gameBase + 0x227CB20, "Comparison dependency was not initialized");
         Require(resume == reinterpret_cast<std::uintptr_t>(GetProcAddress(
@@ -81,11 +96,13 @@ int main(int argc, char** argv) {
         exception.ExceptionCode = EXCEPTION_ACCESS_VIOLATION;
         const auto handler = reinterpret_cast<void(*)(PEXCEPTION_RECORD, PCONTEXT)>(
             Symbol(dll, argv[2], "?ExceptHook@Protection@@"));
+        stage = "exercising protection marker handler";
         handler(&exception, &context);
         Require(continuationCalls == 1 && continuedContext == &context,
             "Protection exception did not reach continuation");
         Require(context.Rcx == original && context.Rbx == original,
             "Protection marker registers were not restored");
+        stage = "unloading fixture";
         resume = realResume;
         VirtualFree(fakeGamePage, 0, MEM_RELEASE);
         FreeLibrary(dll);

@@ -65,6 +65,7 @@ jobs:
             release/SHA256SUMS
             release/launcher-mawlicious.png
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: T7Patch-mawlicious-debug-symbols
           path: |
