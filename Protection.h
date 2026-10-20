@@ -66,6 +66,7 @@ public:
 	static bool IsAutoInstallModsEnabled;
 	static bool IsInjectorlessInstall;
 
+	static bool prepare();
 	static void install();
 	static void uninstall();
 	static bool IsBadReadPtr(void* p);

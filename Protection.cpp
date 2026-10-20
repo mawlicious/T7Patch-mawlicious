@@ -769,8 +769,13 @@ void load_settings_initial()
 
 __int64 old_IsProcessorFeaturePresent = 0;
 
-void Protection::install()
+__declspec(noinline) bool Protection::prepare()
 {
+    // Resolve every callback dependency before any hook can run on a game thread.
+    ZwContinue = reinterpret_cast<tZwContinue>(GetProcAddress(
+        GetModuleHandleW(L"ntdll.dll"), "ZwContinue"));
+    if (!ZwContinue) return false;
+
     LobbyMsgRW_PackageInt = (tLobbyMsgRW_PackageInt)PTR_LobbyMsgRW_PackageInt;
     LobbyMsgRW_PackageUChar = (tLobbyMsgRW_PackageUChar)PTR_LobbyMsgRW_PackageUChar;
     LobbyMsgRW_PackageString = (tLobbyMsgRW_PackageString)PTR_LobbyMsgRW_PackageString;
@@ -813,7 +818,6 @@ void Protection::install()
     LobbyJoin_Reserve = (tLobbyJoin_Reserve)PTR_LobbyJoin_Reserve;
     CL_GetConfigString = (tCL_GetConfigString)PTR_CL_GetConfigString;
     Cbuf_AddText = (tCbuf_AddText)PTR_Cbuf_AddText;
-    I_stricmp = (tI_stricmp)PTR_I_stricmp;
     CachedXUID = **(__int64**)s_playerData_ptr;
 
     SetNetworkPassword(0);
@@ -939,38 +943,6 @@ void Protection::install()
     SS(seckey)
     SS(addrbuff)
 
-    if (*CustomName)
-    {
-        memcpy((void*)REBASE(0x15E84638), CustomName, strlen(CustomName) + 1);
-        memcpy((void*)PTR_Name1, CustomName, strlen(CustomName) + 1);
-        memcpy((void*)PTR_Name2, CustomName, strlen(CustomName) + 1);
-        if (!IsBadReadPtr((VOID*)s_playerData_ptr) && *(INT64*)s_playerData_ptr)
-        {
-            memset((void*)(*(INT64*)s_playerData_ptr + 0x8), 0, 16);
-            memcpy((void*)(*(INT64*)s_playerData_ptr + 0x8), CustomName, strlen(CustomName) + 1);
-        }
-    }
-
-    old_IsProcessorFeaturePresent = (__int64)&IsProcessorFeaturePresent;
-
-    oReadP2PPacket = (decltype(&ReadP2PPacket))((*(__int64*)(STEAMAPI_NETWORKING + 0x10)));
-    IHOOK_INSTALL(IsProcessorFeaturePresent, GetModuleHandleA(0));
-
-    SwapSteamAPIPointer(STEAMAPI_STEAMUSER, STEAMAPI_STEAMUSER_GETUSERNAME, GetUsernamePtr);
-    SwapSteamAPIPointer(STEAMAPI_STEAMUSER, STEAMAPI_STEAMUSER_VT_NAMEBYXUID, GetUsernameXUIDPtr);
-
-    SwapSteamAPIPointer(STEAMAPI_INTERFACE, STEAMAPI_INTERFACE_CHECK_OWNS_CONTENT, GetOwnsContent);
-    SwapSteamAPIPointer(STEAMAPI_INTERFACE, STEAMAPI_INTERFACE_CHECK_OWNS_CONTENT2, GetOwnsContent2);
-    SwapSteamAPIPointer(STEAMAPI_INTERFACE, STEAMAPI_INTERFACE_IS_VAC_BANNED, IsVacBanned);
-    SwapSteamAPIPointer(STEAMAPI_INTERFACE, STEAMAPI_INTERFACE_GET_DLC_DOWNLOAD_PROGRESS, GetDlcDownloadProgress);
-
-    SwapSteamAPIPointer(STEAMAPI_MATCHMAKING, STEAMAPI_MATCHMAKING_GETLOBBYCHATENTRY, GetLobbyChatEntry);
-    SwapSteamAPIPointer(STEAMAPI_MATCHMAKING, STEAMAPI_MATCHMAKING_CREATELOBBY, CreateLobby);
-    SwapSteamAPIPointer(STEAMAPI_NETWORKING, STEAMAPI_NETWORKING_READP2PPACKET, ReadP2PPacket);
-
-    *(__int64*)PTR_UpdatePreloadIdleFN = (INT64)CL_SwitchState_Idle_Update;
-
-
     // join party
     Protection::handle_packet_callbacks[0x10] = [](__int32* lobbyMsgTypePtr, __int64 lobbyMsg)
         {
@@ -1068,9 +1040,46 @@ void Protection::install()
             }
         };
 
+    CachedRetnAddy = PTR_saveLobbyMsgExceptAddy;
+    return true;
+}
+
+void Protection::install()
+{
+    if (*CustomName)
+    {
+        memcpy((void*)REBASE(0x15E84638), CustomName, strlen(CustomName) + 1);
+        memcpy((void*)PTR_Name1, CustomName, strlen(CustomName) + 1);
+        memcpy((void*)PTR_Name2, CustomName, strlen(CustomName) + 1);
+        if (!IsBadReadPtr((VOID*)s_playerData_ptr) && *(INT64*)s_playerData_ptr)
+        {
+            memset((void*)(*(INT64*)s_playerData_ptr + 0x8), 0, 16);
+            memcpy((void*)(*(INT64*)s_playerData_ptr + 0x8), CustomName, strlen(CustomName) + 1);
+        }
+    }
+
+    old_IsProcessorFeaturePresent = (__int64)&IsProcessorFeaturePresent;
+
+    oReadP2PPacket = (decltype(&ReadP2PPacket))((*(__int64*)(STEAMAPI_NETWORKING + 0x10)));
+    IHOOK_INSTALL(IsProcessorFeaturePresent, GetModuleHandleA(0));
+
+    SwapSteamAPIPointer(STEAMAPI_STEAMUSER, STEAMAPI_STEAMUSER_GETUSERNAME, GetUsernamePtr);
+    SwapSteamAPIPointer(STEAMAPI_STEAMUSER, STEAMAPI_STEAMUSER_VT_NAMEBYXUID, GetUsernameXUIDPtr);
+
+    SwapSteamAPIPointer(STEAMAPI_INTERFACE, STEAMAPI_INTERFACE_CHECK_OWNS_CONTENT, GetOwnsContent);
+    SwapSteamAPIPointer(STEAMAPI_INTERFACE, STEAMAPI_INTERFACE_CHECK_OWNS_CONTENT2, GetOwnsContent2);
+    SwapSteamAPIPointer(STEAMAPI_INTERFACE, STEAMAPI_INTERFACE_IS_VAC_BANNED, IsVacBanned);
+    SwapSteamAPIPointer(STEAMAPI_INTERFACE, STEAMAPI_INTERFACE_GET_DLC_DOWNLOAD_PROGRESS, GetDlcDownloadProgress);
+
+    SwapSteamAPIPointer(STEAMAPI_MATCHMAKING, STEAMAPI_MATCHMAKING_GETLOBBYCHATENTRY, GetLobbyChatEntry);
+    SwapSteamAPIPointer(STEAMAPI_MATCHMAKING, STEAMAPI_MATCHMAKING_CREATELOBBY, CreateLobby);
+    SwapSteamAPIPointer(STEAMAPI_NETWORKING, STEAMAPI_NETWORKING_READP2PPACKET, ReadP2PPacket);
+
+    *(__int64*)PTR_UpdatePreloadIdleFN = (INT64)CL_SwitchState_Idle_Update;
+
+
     Protection::Old_lobbymsgprints = *(__int64*)PTR_lobbymsgprints;
     *(__int64*)PTR_lobbymsgprints = 0xFFEEDDCC44332212;
-    Protection::CachedRetnAddy = PTR_saveLobbyMsgExceptAddy;
 
     // Call create lobby again
     ((void(__fastcall*)(__int64))REBASE(0x1EA6010))(REBASE(0x113A4A60));

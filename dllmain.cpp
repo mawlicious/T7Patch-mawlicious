@@ -489,6 +489,12 @@ bool RunPatching()
         return false;
     }
 
+    // The game can enter detours as soon as ApplyVMTHooks/ApplyHooks publishes
+    // them. Initialize function pointers, strings and packet callbacks first.
+    // In particular, Protection has its own ZwContinue pointer; the unrelated
+    // global above does not initialize it.
+    if (!Protection::prepare()) return false;
+
 	// Initialize MinHook
     MH_Initialize();
 

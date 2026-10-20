@@ -22,6 +22,12 @@ jobs:
       - name: Build patch
         shell: cmd
         run: msbuild T7Patch.vcxproj /p:Configuration=Release /p:Platform=x64 /p:PlatformToolset=v143 /p:SolutionDir="%CD%/" /m
+      - name: Test real patch dependencies and exception continuation
+        shell: cmd
+        run: |
+          cl /nologo /std:c++20 /EHsc /W4 /MT tests\test_dependencies.cpp /Fe:test-dependencies-mawlicious.exe
+          if errorlevel 1 exit /b 1
+          test-dependencies-mawlicious.exe x64\Release\T7Patch-mawlicious.dll x64\Release\T7Patch-mawlicious.map
       - name: Build launcher
         shell: cmd
         run: cl /nologo /std:c++20 /EHsc /W4 /MT /O2 launcher\main.cpp /Fe:T7Patch-mawlicious.exe /link /SUBSYSTEM:WINDOWS user32.lib gdi32.lib
@@ -58,3 +64,9 @@ jobs:
             release/T7Patch-mawlicious-windows-x64.zip
             release/SHA256SUMS
             release/launcher-mawlicious.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: T7Patch-mawlicious-debug-symbols
+          path: |
+            x64/Release/*.pdb
+            x64/Release/*.map
