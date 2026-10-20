@@ -30,11 +30,25 @@ std::uintptr_t Symbol(HMODULE dll, const char* mapPath, const char* prefix) {
     const auto base = reinterpret_cast<std::uintptr_t>(dll);
     const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(dll);
     const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS64*>(base + dos->e_lfanew);
+    std::uintptr_t preferredBase = 0;
     for (std::string line; std::getline(map, line);) {
+        const std::string preferredLabel = "Preferred load address is ";
+        if (const auto at = line.find(preferredLabel); at != std::string::npos) {
+            preferredBase = std::stoull(line.substr(at + preferredLabel.size()), nullptr, 16);
+            continue;
+        }
         std::istringstream fields(line);
         std::string section, name, address;
-        if (fields >> section >> name >> address && name.starts_with(prefix))
-            return base + std::stoull(address, nullptr, 16) - nt->OptionalHeader.ImageBase;
+        if (fields >> section >> name >> address && name.starts_with(prefix)) {
+            // Windows updates the mapped PE's ImageBase during relocation.
+            // Map addresses must be rebased using the map's original base.
+            Require(preferredBase != 0, "Missing preferred load address in map");
+            const auto mapped = std::stoull(address, nullptr, 16);
+            Require(mapped >= preferredBase &&
+                mapped - preferredBase < nt->OptionalHeader.SizeOfImage,
+                "Map symbol outside production image");
+            return base + mapped - preferredBase;
+        }
     }
     throw std::runtime_error(std::string("Missing production symbol: ") + prefix);
 }
